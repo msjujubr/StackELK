@@ -9,7 +9,6 @@
 ![Docker](https://img.shields.io/badge/Container-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![JSON](https://img.shields.io/badge/Formato-JSON-000000?style=for-the-badge&logo=json&logoColor=white)
 
-<!-- sudo apt install python3-tk -->
 
 **Problemática:** Uma aplicação web possui um sistema de autenticação utilizado por diferentes usuários. Em determinado momento, o servidor começa a receber diversas tentativas consecutivas de login, principalmente para uma conta específica.
 
@@ -361,3 +360,7 @@ A prática demonstra a importância da centralização de logs para auditoria e 
 Em vez de analisar manualmente arquivos de log, a Stack ELK permite centralizar, indexar, consultar e visualizar grandes quantidades de eventos, facilitando a identificação de padrões suspeitos.
 
 A comparação entre os três cenários permite observar como o aumento da frequência de tentativas malsucedidas pode ser utilizado como indicador de um possível comportamento anômalo.
+
+
+## Colaboradores
+![Contributors](https://readme-contribs.as93.net/contributors/msjujubr/StackELK)
