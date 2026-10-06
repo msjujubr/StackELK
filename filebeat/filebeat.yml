@@ -1,0 +1,18 @@
+filebeat.inputs:
+- type: filestream
+  id: auth-logs
+  enabled: true
+  paths:
+    - /var/log/app/*.log
+  parsers:
+    - ndjson:
+        target: ""
+        add_error_key: true
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  index: "auditoria-auth-%{+yyyy.MM.dd}"
+
+setup.template.name: "auditoria-auth"
+setup.template.pattern: "auditoria-auth-*"
+setup.ilm.enabled: false
