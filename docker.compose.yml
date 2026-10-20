@@ -4,6 +4,8 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
     environment:
+      - node.name=elasticsearch
+      - network.host=0.0.0.0
       - discovery.type=single-node
       - xpack.security.enabled=false # Desativado para facilitar ambiente de estudo local
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"

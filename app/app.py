@@ -6,8 +6,9 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Garantir que o diretório de logs exista
-os.makedirs("logs", exist_ok=True)
+DIRETORIO_PROJETO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DIRETORIO_LOGS = os.path.join(DIRETORIO_PROJETO, "logs")
+os.makedirs(DIRETORIO_LOGS, exist_ok=True)
 
 # Configuração do Logger Customizado para JSON
 class ELKJsonFormatter(logging.Formatter):
@@ -25,7 +26,7 @@ class ELKJsonFormatter(logging.Formatter):
 logger = logging.getLogger("auditoria_auth")
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler("logs/auth_audit.log")
+file_handler = logging.FileHandler(os.path.join(DIRETORIO_LOGS, "auth_audit.log"))
 file_handler.setFormatter(ELKJsonFormatter())
 logger.addHandler(file_handler)
 
@@ -40,7 +41,8 @@ def login():
     data = request.json
     username = data.get('username', 'anonimo')
     password = data.get('password', '')
-    ip = request.remote_addr
+    # Para a simulação local, aceita o IP enviado pela interface por X-Forwarded-For.
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
 
     if username in USUARIOS_VALIDOS and USUARIOS_VALIDOS[username] == password:
         logger.info("Autenticação bem-sucedida", extra={"ip": ip, "username": username, "status": "SUCESSO"})
