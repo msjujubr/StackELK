@@ -10,7 +10,7 @@ DIRETORIO_PROJETO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIRETORIO_LOGS = os.path.join(DIRETORIO_PROJETO, "logs")
 os.makedirs(DIRETORIO_LOGS, exist_ok=True)
 
-# Configuração do Logger Customizado para JSON
+# Configuracao do Logger para JSON
 class ELKJsonFormatter(logging.Formatter):
     def format(self, record):
         log_record = {
@@ -30,7 +30,7 @@ file_handler = logging.FileHandler(os.path.join(DIRETORIO_LOGS, "auth_audit.log"
 file_handler.setFormatter(ELKJsonFormatter())
 logger.addHandler(file_handler)
 
-# Banco de dados simulado
+# Banco de dados ficticio
 USUARIOS_VALIDOS = {
     "usuario_comum": "senha123",
     "admin": "admin_super_secreto"
@@ -41,16 +41,15 @@ def login():
     data = request.json
     username = data.get('username', 'anonimo')
     password = data.get('password', '')
-    # Para a simulação local, aceita o IP enviado pela interface por X-Forwarded-For.
+    # Para simulacao local
     ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
 
     if username in USUARIOS_VALIDOS and USUARIOS_VALIDOS[username] == password:
-        logger.info("Autenticação bem-sucedida", extra={"ip": ip, "username": username, "status": "SUCESSO"})
+        logger.info("Autenticacao bem-sucedida", extra={"ip": ip, "username": username, "status": "SUCESSO"})
         return jsonify({"mensagem": "Bem-vindo!"}), 200
     else:
-        logger.warning("Falha de autenticação", extra={"ip": ip, "username": username, "status": "FALHA"})
+        logger.warning("Falha de autenticacao", extra={"ip": ip, "username": username, "status": "FALHA"})
         return jsonify({"erro": "Credenciais inválidas"}), 401
 
 if __name__ == '__main__':
-    # Rodando na porta 5000
     app.run(host='0.0.0.0', port=5000)

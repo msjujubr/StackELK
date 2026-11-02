@@ -35,8 +35,6 @@ A prática envolve:
 - Identificação de possíveis comportamentos anômalos.
 
 
-
-
 ## Arquitetura
 
 A infraestrutura da prática segue o seguinte fluxo:
@@ -84,282 +82,105 @@ A infraestrutura da prática segue o seguinte fluxo:
 └────────────────────┘
 ```
 
-
-## Ambiente e Instalação
-Recomenda-se utilizar um ambiente virtual Python.
-
-1. Criar o ambiente virtual
-python3 -m venv .venv
-2. Ativar o ambiente virtual
-
-No Linux:
-
-source .venv/bin/activate
-
-No Windows:
-
-.venv\Scripts\Activate.ps1
-3. Instalar as dependências
-pip install flask requests
-
-Caso seja necessário atualizar o pip:
-
-python -m pip install --upgrade pip
-▶️ Execução da Aplicação
-
-Com o ambiente virtual ativado, execute:
-
-python app.py
-
-A aplicação Flask ficará disponível, por padrão, em:
-
-http://127.0.0.1:5000
-
-A página de autenticação poderá então ser acessada pelo navegador.
+Certifique-se de ter instalados em sua máquina os itens solicitados em [requirements](req.txt):
 
 
-## Execução
+## Execução e Testes
 
-A aplicação foi desenvolvida utilizando Python e o framework Flask. A página de autenticação permite tanto usuários previamente definidos quanto em tempo real, realizem tentativas de login.
+### 1. Subir a Stack ELK com Docker
 
-Cada tentativa deverá gera um evento estruturado em formato JSON. Por exemplo:
+Navegue até o diretório raiz do projeto e execute os containers em segundo plano:
 
-```
-{
-    "timestamp": "2026-10-05T10:30:00",
-    "ip": "127.0.0.1",
-    "usuario": "usuario_invasor",
-    "sucesso": false,
-    "evento": "login"
-}
+```bash
+sudo docker compose up -d
 ```
 
-Os campos registrados permitem que o Kibana posteriormente realize filtros e agregações individuais.
+Verifique se todos os containers estão ativos (`elasticsearch`, `kibana`, `filebeat` e `flask-app`):
 
-### Usuários de Teste
+```bash
+sudo docker compose ps
+```
 
-A prática utiliza dois usuários principais:
+*Aguarde cerca de 30 a 60 segundos para que o Elasticsearch inicialize completamente.*
 
-| Usuário | Função |
-| :--- | :--- |
-| `usuario_comum` | Realização de autenticações legítimas |
-| `usuario_invasor` | Utilizado para simulação de tentativas malsucedidas |
+---
 
-## Geração dos Logs
+### 2. Executar a Aplicação e Gerar Logs
 
-A cada tentativa de autenticação, a aplicação deverá registrar um evento no arquivo de logs.
+Para que o Kibana consiga reconhecer os dados, a aplicação precisa gerar eventos de autenticação.
+No terminal (com o ambiente virtual ativo):
 
-Exemplo de evento de login bem-sucedido:
+```bash
+python3 main.py
+```
 
-{
-    "timestamp": "2026-10-05T10:30:00",
-    "ip": "127.0.0.1",
-    "usuario": "usuario_comum",
-    "sucesso": true,
-    "evento": "login"
-}
+Este script executará os 3 cenários de teste sequencialmente.
 
-Exemplo de tentativa malsucedida:
+---
 
-{
-    "timestamp": "2026-10-05T10:31:00",
-    "ip": "127.0.0.1",
-    "usuario": "usuario_invasor",
-    "sucesso": false,
-    "evento": "login"
-}
+### 3. Configurar o Kibana
 
-O formato JSON permite que cada informação seja tratada como um campo independente pelo Elasticsearch e pelo Kibana.
+- Abra o navegador e acesse: **`http://localhost:5601`**
+- Acesse o menu lateral esquerdo (`≡`) e vá para **Management > Stack Management**.
+- Sob a seção **Kibana**, clique em **Data Views** (ou *Index Patterns*).
+-. Clique no botão azul **Create data view**.
+- Preencha os campos da seguinte forma:
+   - **Name:** `auditoria-auth-*`
+   - **Index pattern:** `auditoria-auth-*` *(O Kibana indicará correspondência se os logs já tiverem sido gerados)*
+   - **Timestamp field:** Selecione `@timestamp`
+- Clique no botão **Save data view to Kibana**.
 
-🧪 Cenários de Teste
+---
 
-Serão realizados três cenários para representar diferentes níveis de atividade.
+### 4. Análise e Auditoria no Kibana
 
-🟢 Caso 1 — Comportamento Bom
+Com o Data View criado, navegue até a seção **Discover** no menu lateral esquerdo:
 
-Representa um comportamento normal de utilização da aplicação.
+- **Ajustar o Filtro Temporal:** No canto superior direito, defina o período de tempo como *Last 15 minutes* ou *Last 1 hour*.
+- **Filtrar por Falhas:** Na barra de pesquisa principal do Discover, digite:
+   ```text
+   status_autenticacao : "FALHA"
+   ```
+- **Isolar o IP Atacante:** Para investigar o ataque de força bruta (Caso Pior), filtre pelo IP do invasor:
+   ```text
+   ip_origem : "203.0.113.45"
+   ```
+- **Visualização por Campos:** Clique em qualquer registro para inspecionar os campos JSON gravados (`@timestamp`, `ip_origem`, `usuario_alvo`, `status_autenticacao`).
 
-O usuário usuario_comum realizará autenticações legítimas, podendo também cometer alguns erros simples de digitação.
+---
 
-Exemplo
-usuario_comum → login correto
-usuario_comum → senha incorreta
-usuario_comum → login correto
+## Cenários de Teste
 
-Características esperadas:
+| Cenário | Descrição | Comportamento Esperado |
+| :--- | :--- | :--- |
+| **Caso Bom** | Usuário legítimo (`usuario_comum`) com pequeno erro de digitação pontual. | Baixa frequência, predominância de sucesso (`200 OK`). |
+| **Caso Médio** | Erros de autenticação insistentes moderados. | Alerta visual de falhas consecutivas concentradas. |
+| **Pior Caso** | Ataque de Força Bruta automatizado pelo IP `203.0.113.45`. | Avalanche de erros HTTP 401 (`FALHA`), alta taxa em curto intervalo. |
 
-Poucas tentativas;
-Predominância de autenticações bem-sucedidas;
-Usuário comum como alvo;
-Ausência de grande quantidade de tentativas consecutivas;
-Comportamento compatível com um usuário normal.
-Objetivo
+---
 
-Estabelecer um comportamento de referência para comparação com os demais cenários.
+## Estrutura do Projeto
 
-🟡 Caso 2 — Comportamento Médio
-
-Representa uma situação que merece investigação.
-
-Serão realizadas algumas tentativas consecutivas de autenticação malsucedida utilizando a conta usuario_invasor.
-
-Exemplo:
-
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → login correto
-
-Características esperadas:
-
-Aumento da quantidade de falhas;
-Várias tentativas direcionadas ao mesmo usuário;
-Tentativas concentradas em um intervalo relativamente curto;
-Possível comportamento anômalo.
-Objetivo
-
-Identificar no Kibana que a frequência de falhas está acima do comportamento esperado.
-
-🔴 Caso 3 — Pior Caso
-
-Representa um comportamento claramente anômalo.
-
-Serão simuladas diversas tentativas consecutivas de autenticação malsucedida contra usuario_invasor.
-
-Exemplo:
-
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-usuario_invasor → senha incorreta
-
-Características esperadas:
-
-Grande quantidade de falhas;
-Mesmo usuário sendo repetidamente alvo;
-Tentativas concentradas em curto intervalo;
-Alta proporção de autenticações malsucedidas;
-Possível comportamento automatizado ou tentativa de ataque.
-Objetivo
-
-Demonstrar como a centralização dos logs permite detectar rapidamente um comportamento anômalo.
-
-Observação: todos os testes devem ser realizados exclusivamente no ambiente controlado da prática, utilizando usuários e credenciais fictícios.
-
-📊 Análise com Kibana
-
-Após a coleta dos eventos pelo Filebeat e sua indexação no Elasticsearch, o Kibana será utilizado para analisar os registros.
-
-Algumas análises que podem ser realizadas:
-
-Tentativas por usuário
-
-Identificar quais usuários receberam mais tentativas de autenticação.
-
-usuario_comum       → 3 tentativas
-usuario_invasor     → 10 tentativas
-Tentativas por IP
-
-Identificar o endereço IP responsável pelas requisições.
-
-127.0.0.1 → 13 tentativas
-Sucesso x Falha
-
-Comparar a quantidade de autenticações bem-sucedidas e malsucedidas.
-
-Sucesso  → 3
-Falha    → 10
-Tentativas ao longo do tempo
-
-Criar uma visualização temporal para identificar concentrações de tentativas.
-
-Quantidade
-   │
-10 │             █
- 8 │             █
- 6 │             █
- 4 │       █     █
- 2 │ █     █     █
- 0 └──────────────────
-       Bom   Médio  Pior
-
-
-
-| Indicador                  | Comportamento normal | Possível anomalia  |
-| -------------------------- | -------------------- | ------------------ |
-| Quantidade de tentativas   | Baixa                | Alta               |
-| Falhas consecutivas        | Poucas               | Muitas             |
-| Usuário alvo               | Variado              | Concentrado        |
-| Intervalo entre tentativas | Irregular            | Muito curto        |
-| Taxa de falhas             | Baixa                | Elevada            |
-| IP                         | Uso normal           | Muitas requisições |
-
-
-A combinação desses indicadores pode auxiliar na identificação de um possível comportamento suspeito.
-
-🛠️ Tecnologias Utilizadas
-Python — linguagem de programação;
-Flask — desenvolvimento da aplicação web;
-Requests — realização de requisições HTTP durante os testes;
-Filebeat — coleta e encaminhamento dos logs;
-Elasticsearch — armazenamento e indexação dos eventos;
-Kibana — consulta, filtragem e visualização dos dados;
-JSON — formato estruturado dos eventos.
-
-
+```text
 .
-├── app.py
-├── requirements.txt
-├── logs/
-│   └── auth.log
-├── templates/
-│   └── login.html
-├── static/
-│   └── style.css
+├── app/
+│   ├── app.py              # Aplicação Flask com   logging JSON customizado
+│   └──interface.py        # Interface Tkinter para automação e consulta REST
 ├── filebeat/
-│   └── filebeat.yml
-└── README.md
+│   └── filebeat.yml    # Configuração de coleta do Filebeat (NDJSON)
+├── logs/
+│   └── auth_audit.log
+├── docker-compose.yml  # Orquestração dos serviços (Elasticsearch, Kibana, Filebeat, App)
+├── Dockerfile          # Instruções de build da aplicação Flask
+├── main.py             # Script CLI para automação dos 3 cenários
+├── README.md           # Documentação do projeto
+└── req.txt             # Dependências Python
+```
 
-Flask
-requests
+---
 
-pip install -r requirements.txt
-
-
-🔐 Segurança e Escopo
-
-Esta prática possui finalidade educacional e deve ser executada exclusivamente em um ambiente controlado.
-
-As tentativas de autenticação são simuladas contra a própria aplicação desenvolvida para a prática. Não devem ser realizadas tentativas de autenticação contra sistemas, servidores ou contas de terceiros.
-
-✅ Resultados Esperados
-
-Ao final da prática, espera-se que seja possível:
-
-Implementar uma aplicação web com autenticação;
-Gerar logs estruturados em JSON;
-Centralizar os eventos utilizando o Filebeat;
-Armazenar os eventos no Elasticsearch;
-Consultar os eventos no Kibana;
-Identificar usuários e IPs envolvidos;
-Contabilizar tentativas de autenticação;
-Diferenciar autenticações bem-sucedidas e malsucedidas;
-Comparar os cenários bom, médio e pior;
-Identificar indícios de comportamento anômalo por meio da análise dos logs.
-📚 Conclusão
-
-A prática demonstra a importância da centralização de logs para auditoria e segurança de aplicações web.
-
-Em vez de analisar manualmente arquivos de log, a Stack ELK permite centralizar, indexar, consultar e visualizar grandes quantidades de eventos, facilitando a identificação de padrões suspeitos.
-
-A comparação entre os três cenários permite observar como o aumento da frequência de tentativas malsucedidas pode ser utilizado como indicador de um possível comportamento anômalo.
+## Segurança e Escopo
+Esta prática possui finalidade estritamente educacional, todos os testes são executados em ambiente local isolado por containers.
 
 
 ## Colaboradores
