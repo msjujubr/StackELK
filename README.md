@@ -37,50 +37,11 @@ A prática envolve:
 
 ## Arquitetura
 
-A infraestrutura da prática segue o seguinte fluxo:
+A infraestrutura da prática segue o seguinte fluxograma:
 
-```text
-┌────────────────────┐
-│    Navegador /     │
-│      Cliente       │
-└─────────┬──────────┘
-          │
-          │ HTTP
-          ▼
-┌────────────────────┐
-│  Aplicação Flask   │
-│                    │
-│  Autenticação      │
-│  +                 │
-│  Logs JSON         │
-└─────────┬──────────┘
-          │
-          │ arquivo de log
-          ▼
-┌────────────────────┐
-│      Filebeat      │
-│                    │
-│ Coleta dos eventos │
-└─────────┬──────────┘
-          │
-          │ eventos
-          ▼
-┌────────────────────┐
-│   Elasticsearch    │
-│                    │
-│ Armazenamento e    │
-│ indexação          │
-└─────────┬──────────┘
-          │
-          │ consultas
-          ▼
-┌────────────────────┐
-│       Kibana       │
-│                    │
-│ Filtros, gráficos  │
-│ e análise          │
-└────────────────────┘
-```
+<p align="center">
+    <img src="docs/fluxograma.png" width="300">
+</p>
 
 Certifique-se de ter instalados em sua máquina os itens solicitados em [requirements](req.txt):
 
@@ -147,7 +108,6 @@ Com o Data View criado, navegue até a seção **Discover** no menu lateral esqu
    ```
 - **Visualização por Campos:** Clique em qualquer registro para inspecionar os campos JSON gravados (`@timestamp`, `ip_origem`, `usuario_alvo`, `status_autenticacao`).
 
----
 
 ## Cenários de Teste
 
@@ -157,15 +117,14 @@ Com o Data View criado, navegue até a seção **Discover** no menu lateral esqu
 | **Caso Médio** | Erros de autenticação insistentes moderados. | Alerta visual de falhas consecutivas concentradas. |
 | **Pior Caso** | Ataque de Força Bruta automatizado pelo IP `203.0.113.45`. | Avalanche de erros HTTP 401 (`FALHA`), alta taxa em curto intervalo. |
 
----
 
 ## Estrutura do Projeto
 
 ```text
 .
 ├── app/
-│   ├── app.py              # Aplicação Flask com   logging JSON customizado
-│   └──interface.py        # Interface Tkinter para automação e consulta REST
+│   ├── app.py          # Aplicação Flask com   logging JSON customizado
+│   └──interface.py     # Interface Tkinter para automação e consulta REST
 ├── filebeat/
 │   └── filebeat.yml    # Configuração de coleta do Filebeat (NDJSON)
 ├── logs/
@@ -177,11 +136,5 @@ Com o Data View criado, navegue até a seção **Discover** no menu lateral esqu
 └── req.txt             # Dependências Python
 ```
 
----
-
 ## Segurança e Escopo
 Esta prática possui finalidade estritamente educacional, todos os testes são executados em ambiente local isolado por containers.
-
-
-## Colaboradores
-![Contributors](https://readme-contribs.as93.net/contributors/msjujubr/StackELK)
