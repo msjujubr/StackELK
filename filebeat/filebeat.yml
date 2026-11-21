@@ -3,11 +3,19 @@ filebeat.inputs:
   id: auth-logs
   enabled: true
   paths:
-    - /var/log/app/*.log
+    - /var/log/app/auth_audit_v3.log
   parsers:
     - ndjson:
-        target: ""
+        target: "json"
         add_error_key: true
+
+processors:
+  - timestamp:
+      field: "json.@timestamp"
+      layouts:
+        - '2006-01-02T15:04:05.999999Z'
+      ignore_missing: false
+      ignore_failure: false
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]

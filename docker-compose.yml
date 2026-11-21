@@ -34,6 +34,7 @@ services:
       - kibana
     networks:
       - elk-net
+    command: ["-e", "--strict.perms=false"]
 
   app:
     build: .
@@ -41,7 +42,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./logs:/logs
+      - ./logs:/app/logs
     networks:
       - elk-net
     restart: always
