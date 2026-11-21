@@ -1,53 +1,117 @@
 services:
+  app:
+    build:
+      context: ./app
+    container_name: stackelk-app
+    expose:
+      - "5000"
+    networks:
+      - elk
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: stackelk-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./web:/usr/share/nginx/html:ro
+      - nginx_logs:/var/log/stackelk
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - elk
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION:-8.17.0}
+    container_name: stackelk-elasticsearch
     environment:
-      - node.name=elasticsearch
-      - network.host=0.0.0.0
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
     networks:
-      - elk-net
+      - elk
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9200/_cluster/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.10.2
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION:-8.17.0}
+    container_name: stackelk-kibana
+    environment:
+      SERVER_NAME: kibana
+      SERVER_HOST: 0.0.0.0
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
     ports:
       - "5601:5601"
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
-      - elk-net
+      - elk
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5601/api/status >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
 
   filebeat:
-    image: docker.elastic.co/beats/filebeat:8.10.2
+    image: docker.elastic.co/beats/filebeat:${STACK_VERSION:-8.17.0}
+    container_name: stackelk-filebeat
     user: root
+    command: ["-e", "--strict.perms=false"]
     volumes:
       - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ./logs:/var/log/app:ro
+      - nginx_logs:/var/log/stackelk:ro
+      - filebeat_data:/usr/share/filebeat/data
     depends_on:
-      - elasticsearch
-      - kibana
+      nginx:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     networks:
-      - elk-net
-    command: ["-e", "--strict.perms=false"]
+      - elk
+    restart: unless-stopped
 
-  app:
-    build: .
-    container_name: flask-app
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - elk-net
-    restart: always
-  
 networks:
-  elk-net:
+  elk:
+    name: stackelk-network
     driver: bridge
-  
+
+volumes:
+  es_data:
+  nginx_logs:
+  filebeat_data:

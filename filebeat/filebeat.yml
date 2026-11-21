@@ -1,26 +1,51 @@
 filebeat.inputs:
-- type: filestream
-  id: auth-logs
-  enabled: true
-  paths:
-    - /var/log/app/auth_audit_v3.log
-  parsers:
-    - ndjson:
-        target: "json"
-        add_error_key: true
+  # Logs estruturados de acesso do Nginx: uma linha JSON por requisição.
+  - type: filestream
+    id: nginx-access-log
+    enabled: true
+    paths:
+      - /var/log/stackelk/access.log
+    parsers:
+      - ndjson:
+          target: ""
+          overwrite_keys: true
+          add_error_key: true
 
+  # Logs de erro do Nginx: texto original armazenado em message.
+  - type: filestream
+    id: nginx-error-log
+    enabled: true
+    paths:
+      - /var/log/stackelk/error.log
+    fields_under_root: true
+    fields:
+      event:
+        dataset: nginx.error
+        kind: event
+      service:
+        type: nginx
+
+# Converte o timestamp ISO 8601 do access.log para o @timestamp do evento.
+# Nos eventos do error.log, o campo não existe e o timestamp de coleta é mantido.
 processors:
   - timestamp:
-      field: "json.@timestamp"
+      field: timestamp
+      target_field: "@timestamp"
       layouts:
-        - '2006-01-02T15:04:05.999999Z'
-      ignore_missing: false
-      ignore_failure: false
+        - '2006-01-02T15:04:05-07:00'
+      ignore_missing: true
+      ignore_failure: true
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
-  index: "auditoria-auth-%{+yyyy.MM.dd}"
+  index: "filebeat-%{[agent.version]}-%{+yyyy.MM.dd}"
 
-setup.template.name: "auditoria-auth"
-setup.template.pattern: "auditoria-auth-*"
+# Mantem o template ECS padrao do Filebeat e desativa ILM para usar indice diario.
 setup.ilm.enabled: false
+
+setup.template.name: "filebeat"
+setup.template.pattern: "filebeat-*"
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0

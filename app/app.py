@@ -1,56 +1,72 @@
-import logging
-import json
-import os
-from datetime import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, render_template_string
 
 app = Flask(__name__)
 
-DIRETORIO_PROJETO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIRETORIO_LOGS = os.path.join(DIRETORIO_PROJETO, "logs")
-os.makedirs(DIRETORIO_LOGS, exist_ok=True)
+HOME = """<!doctype html>
+<html lang=\"pt-BR\">
+<head>
+  <meta charset=\"utf-8\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+  <title>Stack ELK - Prática 03</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 850px; margin: 3rem auto;
+           padding: 0 1.2rem; line-height: 1.6; color: #202938; }
+    h1 { color: #075985; }
+    code { background: #eef2f7; padding: .15rem .35rem; border-radius: 4px; }
+    .box { background: #f0f9ff; border-left: 4px solid #0284c7; padding: 1rem; }
+    a { color: #0369a1; }
+  </style>
+</head>
+<body>
+  <h1>Aplicação de demonstração - Stack ELK</h1>
+  <p>Este serviço Flask está publicado por meio do Nginx. As requisições são
+     registradas nos arquivos <code>access.log</code> e <code>error.log</code>,
+     coletados pelo Filebeat e enviados ao Elasticsearch.</p>
+  <div class="box">
+    <strong>Rotas disponíveis</strong>
+    <ul>
+      <li><a href="/">Página inicial</a></li>
+      <li><a href="/sobre">Sobre o projeto</a></li>
+      <li><a href="/api/status">API de status</a></li>
+      <li><a href="/health">Saúde da aplicação Flask</a></li>
+      <li><a href="/arquivos/LEIA-ME.txt">Arquivo estático servido pelo Nginx</a></li>
+    </ul>
+  </div>
+  <p>Para a validação da Prática 03, o script de teste também requisita centenas
+     de arquivos inexistentes em <code>/arquivos/</code>, gerando respostas HTTP 404.</p>
+</body>
+</html>"""
 
-# Configuracao do Logger para JSON
-class ELKJsonFormatter(logging.Formatter):
-    def format(self, record):
-        log_record = {
-            "@timestamp": datetime.utcnow().isoformat() + "Z", # Formato ISO8601 exigido pelo Elastic
-            "level": record.levelname,
-            "ip_origem": record.__dict__.get("ip", "unknown"),
-            "usuario_alvo": record.__dict__.get("username", "unknown"),
-            "status_autenticacao": record.__dict__.get("status", "unknown"),
-            "mensagem": record.getMessage()
-        }
-        return json.dumps(log_record)
 
-logger = logging.getLogger("auditoria_auth")
-print("LOGGER:", logger.name, logger.handlers)
-logger.setLevel(logging.INFO)
+@app.get("/")
+def index():
+    return render_template_string(HOME)
 
-file_handler = logging.FileHandler(os.path.join(DIRETORIO_LOGS, "auth_audit_v3.log"))
-file_handler.setFormatter(ELKJsonFormatter())
-logger.addHandler(file_handler)
 
-# Banco de dados ficticio
-USUARIOS_VALIDOS = {
-    "usuario_comum": "senha123",
-    "admin": "admin_super_secreto"
-}
+@app.get("/sobre")
+def about():
+    return (
+        "<h1>Sobre</h1><p>Ambiente didático de centralização e análise de logs "
+        "com Nginx, Filebeat, Elasticsearch e Kibana.</p>",
+        200,
+        {"Content-Type": "text/html; charset=utf-8"},
+    )
 
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.json
-    username = data.get('username', 'anonimo')
-    password = data.get('password', '')
-    # Para simulacao local
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
-    print("REQUISICAO RECEBIDA:", username)
-    if username in USUARIOS_VALIDOS and USUARIOS_VALIDOS[username] == password:
-        logger.info("Autenticacao bem-sucedida", extra={"ip": ip, "username": username, "status": "SUCESSO"})
-        return jsonify({"mensagem": "Bem-vindo!"}), 200
-    else:
-        logger.warning("Falha de autenticacao", extra={"ip": ip, "username": username, "status": "FALHA"})
-        return jsonify({"erro": "Credenciais inválidas"}), 401
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+@app.get("/api/status")
+def api_status():
+    return jsonify(status="online", projeto="Stack ELK - Prática 03")
+
+
+@app.get("/health")
+def health():
+    return jsonify(status="ok"), 200
+
+
+@app.errorhandler(404)
+def not_found(_error):
+    return jsonify(erro="Recurso não encontrado", status=404), 404
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

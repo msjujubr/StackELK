@@ -1,0 +1,2 @@
+Este arquivo estático é servido diretamente pelo Nginx.
+Acesse /arquivos/LEIA-ME.txt para gerar uma requisição HTTP 200.

@@ -1,0 +1,175 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{margin=1.8cm}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,shapes.geometric}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{codebg}{RGB}{246,248,250}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{black!15},
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  xleftmargin=3pt,
+  xrightmargin=3pt
+}
+
+\title{Centralização de Logs, Auditoria e Segurança com a Stack ELK}
+\author{Sistemas Operacionais Modernos -- CEFET-MG}
+\date{Prática 03}
+
+\begin{document}
+\maketitle
+\vspace{-1.2em}
+
+\section{Introdução}
+
+Aplicações e servidores web produzem registros de acesso e de erro que permitem acompanhar requisições, investigar falhas e identificar comportamentos anormais. Quando esses registros permanecem dispersos em arquivos locais, a análise torna-se trabalhosa. A centralização permite pesquisar eventos em um único ambiente e correlacionar informações, como horário, endereço IP, recurso solicitado e código HTTP.
+
+O objetivo desta prática é implantar uma infraestrutura de centralização e consulta de logs utilizando Elasticsearch, Filebeat e Kibana. Como serviço web, foi utilizada uma aplicação Flask publicada por meio do servidor Nginx. O Nginx registra as requisições em \texttt{access.log} e as falhas de acesso a arquivos em \texttt{error.log}; o Filebeat coleta esses arquivos e envia os eventos ao Elasticsearch; e o Kibana permite pesquisar e visualizar os registros.
+
+\section{Arquitetura e fluxo de dados}
+
+Os serviços são executados em containers Docker conectados à rede virtual \texttt{stackelk-network}, definida no arquivo \texttt{docker-compose.yml}. O fluxo da solução é apresentado na Figura~\ref{fig:arquitetura}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=5mm and 7mm,
+  caixa/.style={draw,rounded corners,thick,align=center,minimum height=9mm,text width=2.35cm,fill=blue!5,font=\small},
+  log/.style={draw,rounded corners,thick,align=center,minimum height=9mm,text width=2.55cm,fill=orange!10,font=\small},
+  seta/.style={-{Latex[length=2mm]},thick}
+]
+\node[caixa] (cliente) {Navegador /\texttt{gerar\_trafego.py}};
+\node[caixa,right=of cliente] (nginx) {Nginx\\porta 8080};
+\node[caixa,right=of nginx] (flask) {Aplicação\\Flask};
+\draw[seta] (cliente)--(nginx);
+\draw[seta] (nginx)--node[above,font=\scriptsize]{proxy HTTP}(flask);
+\node[log,below=11mm of nginx] (logs) {Volume compartilhado\\\texttt{access.log} e \texttt{error.log}};
+\node[caixa,right=of logs] (beat) {Filebeat\\coleta};
+\node[caixa,right=of beat] (es) {Elasticsearch\\indexação};
+\node[caixa,right=of es] (kibana) {Kibana\\Discover / Lens};
+\draw[seta] (nginx)--node[left,font=\scriptsize]{grava}(logs);
+\draw[seta] (logs)--(beat);
+\draw[seta] (beat)--(es);
+\draw[seta] (es)--(kibana);
+\end{tikzpicture}
+\caption{Arquitetura de coleta, armazenamento e consulta dos logs.}
+\label{fig:arquitetura}
+\end{figure}
+
+O navegador e o script de teste acessam o Nginx pela porta 8080. As rotas dinâmicas são encaminhadas à aplicação Flask. O Nginx registra todas as requisições no arquivo \texttt{access.log}, em formato JSON, e as falhas de abertura de arquivos estáticos no \texttt{error.log}. Os dois arquivos ficam em um volume Docker compartilhado: Nginx possui acesso de escrita e Filebeat realiza a leitura.
+
+O Filebeat utiliza a rede interna e o nome do serviço \texttt{elasticsearch} como destino. Cada linha do log de acesso é interpretada como um documento JSON; as linhas do log de erro são encaminhadas como mensagens textuais. O Elasticsearch indexa os eventos em índices diários \texttt{filebeat-<versão>-AAAA.MM.DD}. O Kibana consulta o padrão \texttt{filebeat-*}.
+
+\section{Ferramentas e utilização no projeto}
+
+\textbf{Nginx e Flask.} Flask fornece a página inicial, a rota \texttt{/sobre}, a API \texttt{/api/status} e o endpoint de saúde \texttt{/health}. Nginx atua como servidor de entrada e proxy reverso. O formato JSON do log de acesso registra \texttt{timestamp}, \texttt{client.ip}, método HTTP, URI, código de resposta, tamanho da resposta e agente do usuário. O formato estruturado facilita a extração de campos e as agregações no Elasticsearch.
+
+\textbf{Filebeat.} O arquivo \texttt{filebeat/filebeat.yml} declara dois inputs do tipo \texttt{filestream}: um monitora \texttt{/var/log/stackelk/access.log} e utiliza o parser \texttt{ndjson}; o outro monitora \texttt{/var/log/stackelk/error.log}. Um processador converte o campo temporal do log de acesso para \texttt{@timestamp}. A saída \texttt{output.elasticsearch} envia os eventos ao serviço Elasticsearch pela porta 9200 na rede Docker.
+
+\textbf{Elasticsearch.} Recebe os eventos do Filebeat e os armazena em índices pesquisáveis. O campo \texttt{client.ip} permite agrupar requisições por origem, enquanto \texttt{http.response.status\_code} permite filtrar respostas HTTP 404. A configuração utiliza um nó único e desabilita a segurança apenas para simplificar o laboratório local.
+
+\textbf{Kibana.} A Data View \texttt{filebeat-*} permite explorar os eventos em Discover. A pesquisa pode ser refinada por período e por campos estruturados. No Lens, é possível construir uma tabela ou gráfico com a contagem de registros por \texttt{client.ip}, limitada às respostas 404.
+
+\textbf{Docker Compose.} O arquivo \texttt{docker-compose.yml} define os cinco serviços, a rede virtual e os volumes persistentes. As dependências com condição \texttt{service\_healthy} evitam iniciar os componentes dependentes antes dos serviços essenciais estarem disponíveis.
+
+\section{Execução e validação}
+
+A implantação é realizada na raiz do projeto. Em sistemas Linux, antes de iniciar o Elasticsearch, ajusta-se o limite de memória virtual:
+
+\begin{lstlisting}
+sudo sysctl -w vm.max_map_count=262144
+docker compose pull
+docker compose up -d --build
+docker compose ps
+\end{lstlisting}
+
+A aplicação fica disponível em \texttt{http://localhost:8080} e o Kibana em \texttt{http://localhost:5601}. A Data View é criada pelo script \texttt{scripts/criar\_data\_view.sh}.
+
+A validação utiliza \texttt{scripts/gerar\_trafego.py}, que não exige bibliotecas adicionais. Primeiro, são geradas 30 requisições legítimas, distribuídas entre as rotas existentes:
+
+\begin{lstlisting}
+python3 scripts/gerar_trafego.py --normal-only --count 30
+\end{lstlisting}
+
+Em seguida, o script tenta acessar 250 arquivos inexistentes em \texttt{/arquivos/inexistentes/}:
+
+\begin{lstlisting}
+python3 scripts/gerar_trafego.py --attack-only --count 250 --delay 0.01
+\end{lstlisting}
+
+A rota de arquivos estáticos é atendida diretamente pelo Nginx. Para cada arquivo inexistente, o servidor registra uma resposta HTTP 404 no \texttt{access.log} e a falha de abertura no \texttt{error.log}. Assim, o teste exercita os dois inputs configurados no Filebeat.
+
+No Kibana, em \textit{Discover}, seleciona-se a Data View \texttt{filebeat-*}, ajusta-se o intervalo de tempo para abranger a execução e aplica-se a consulta KQL:
+
+\begin{lstlisting}
+event.dataset : "nginx.access" and http.response.status_code : 404
+\end{lstlisting}
+
+As colunas \texttt{@timestamp}, \texttt{client.ip}, \texttt{http.response.status\_code} e \texttt{url.original} mostram o horário, a origem, o código e o recurso requisitado. Para examinar o arquivo de erro, utiliza-se \texttt{event.dataset : "nginx.error"}. Uma visualização Lens com a métrica \textit{Count of records} e agrupamento por \texttt{client.ip} evidencia as origens com maior quantidade de falhas.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Cenários de validação disponibilizados no projeto.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.2cm} p{2.5cm} X}
+\toprule
+\textbf{Cenário} & \textbf{Volume planejado} & \textbf{Evidência esperada} \\
+\midrule
+Tráfego legítimo & 30 requisições & Respostas HTTP 200 nas rotas existentes, registradas no \texttt{access.log}. \\
+Varredura de recursos & 250 requisições & Respostas HTTP 404, IP de origem e URIs inexistentes no Discover; falhas de abertura no \texttt{error.log}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Os volumes da tabela correspondem aos parâmetros do script de validação. A contagem final deve ser confirmada no Kibana após a execução, pois depende de o ambiente estar ativo e de todos os eventos terem sido encaminhados pelo Filebeat.
+
+\newpage
+\section{Conclusão}
+
+O sistema integra um serviço web, um servidor Nginx e os componentes da Stack Elastic para centralizar logs de acesso e erro. O Nginx produz registros estruturados e textuais; o Filebeat monitora os arquivos e encaminha os eventos; o Elasticsearch os indexa; e o Kibana permite pesquisar e visualizar as ocorrências. O Docker Compose torna a infraestrutura reproduzível, organizando os serviços em uma rede comum e compartilhando os arquivos por volume.
+
+Os dois cenários automatizados permitem comparar acessos legítimos com uma sequência de tentativas a recursos inexistentes. A consulta KQL por código 404 e o agrupamento por IP permitem localizar o intervalo da anomalia e identificar a origem observada pelo servidor. A configuração foi preparada para laboratório acadêmico; em produção, seria necessário habilitar autenticação, TLS e políticas adequadas de controle de acesso e retenção.
+
+\section*{Repositório e materiais}
+
+O pacote do projeto contém os arquivos de aplicação, configuração do Nginx, Docker Compose, Filebeat e scripts de validação. A documentação de instalação e operação está no arquivo \texttt{README.md}.
+
+\begin{thebibliography}{9}
+\bibitem{elastic}
+ELASTIC. \textit{Filebeat Reference}. Disponível em: \url{https://www.elastic.co/guide/en/beats/filebeat/current/index.html}. Acesso em: 21 nov. 2026.
+
+\bibitem{es}
+ELASTIC. \textit{Elasticsearch Guide}. Disponível em: \url{https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html}. Acesso em: 21 nov. 2026.
+
+\bibitem{kibana}
+ELASTIC. \textit{Kibana Guide}. Disponível em: \url{https://www.elastic.co/guide/en/kibana/current/index.html}. Acesso em: 21 nov. 2026.
+
+\bibitem{nginx}
+NGINX. \textit{Configuring Logging}. Disponível em: \url{https://nginx.org/en/docs/http/ngx_http_log_module.html}. Acesso em: 21 nov. 2026.
+
+\bibitem{docker}
+DOCKER. \textit{Docker Compose}. Disponível em: \url{https://docs.docker.com/compose/}. Acesso em: 21 nov. 2026.
+\end{thebibliography}
+
+\end{document}
