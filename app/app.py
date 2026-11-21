@@ -24,9 +24,10 @@ class ELKJsonFormatter(logging.Formatter):
         return json.dumps(log_record)
 
 logger = logging.getLogger("auditoria_auth")
+print("LOGGER:", logger.name, logger.handlers)
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler(os.path.join(DIRETORIO_LOGS, "auth_audit.log"))
+file_handler = logging.FileHandler(os.path.join(DIRETORIO_LOGS, "auth_audit_v3.log"))
 file_handler.setFormatter(ELKJsonFormatter())
 logger.addHandler(file_handler)
 
@@ -43,7 +44,7 @@ def login():
     password = data.get('password', '')
     # Para simulacao local
     ip = request.headers.get("X-Forwarded-For", request.remote_addr).split(",")[0].strip()
-
+    print("REQUISICAO RECEBIDA:", username)
     if username in USUARIOS_VALIDOS and USUARIOS_VALIDOS[username] == password:
         logger.info("Autenticacao bem-sucedida", extra={"ip": ip, "username": username, "status": "SUCESSO"})
         return jsonify({"mensagem": "Bem-vindo!"}), 200

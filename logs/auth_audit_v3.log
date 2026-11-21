@@ -7853,3 +7853,28 @@
 {"@timestamp": "2026-11-21T23:31:04.590078Z", "level": "WARNING", "ip_origem": "203.0.113.76", "usuario_alvo": "rh", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticação"}
 {"@timestamp": "2026-11-21T23:54:58.198208Z", "level": "WARNING", "ip_origem": "198.51.100.120", "usuario_alvo": "postgres", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticação"}
 {"@timestamp": "2026-11-21T23:57:43.044504Z", "level": "WARNING", "ip_origem": "198.51.100.39", "usuario_alvo": "teste", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticação"}
+{"@timestamp": "2026-11-21T12:37:27.447857Z", "level": "INFO", "ip_origem": "127.0.0.1", "usuario_alvo": "teste_logger", "status_autenticacao": "SUCESSO", "mensagem": "TESTE DIRETO DO LOGGER"}
+{"@timestamp": "2026-11-21T12:45:33.806559Z", "level": "INFO", "ip_origem": "192.168.1.70", "usuario_alvo": "usuario_comum", "status_autenticacao": "SUCESSO", "mensagem": "Autenticacao bem-sucedida"}
+{"@timestamp": "2026-11-21T12:48:58.375458Z", "level": "INFO", "ip_origem": "192.168.1.70", "usuario_alvo": "usuario_comum", "status_autenticacao": "SUCESSO", "mensagem": "Autenticacao bem-sucedida"}
+{"@timestamp": "2026-11-21T12:59:33.499768Z", "level": "INFO", "ip_origem": "192.168.1.15", "usuario_alvo": "usuario_comum", "status_autenticacao": "SUCESSO", "mensagem": "Autenticacao bem-sucedida"}
+{"@timestamp": "2026-11-21T12:59:34.510240Z", "level": "WARNING", "ip_origem": "192.168.1.15", "usuario_alvo": "usuario_comum", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T12:59:36.522268Z", "level": "INFO", "ip_origem": "192.168.1.15", "usuario_alvo": "usuario_comum", "status_autenticacao": "SUCESSO", "mensagem": "Autenticacao bem-sucedida"}
+{"@timestamp": "2026-11-21T12:59:39.547922Z", "level": "WARNING", "ip_origem": "192.168.1.50", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T12:59:41.056770Z", "level": "WARNING", "ip_origem": "192.168.1.51", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T12:59:42.569859Z", "level": "WARNING", "ip_origem": "192.168.1.51", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T12:59:44.081314Z", "level": "WARNING", "ip_origem": "192.168.1.50", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T12:59:45.593942Z", "level": "WARNING", "ip_origem": "192.168.1.51", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T12:59:47.112182Z", "level": "WARNING", "ip_origem": "192.168.1.50", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T12:59:48.633132Z", "level": "WARNING", "ip_origem": "192.168.1.50", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T12:59:50.158697Z", "level": "WARNING", "ip_origem": "192.168.1.51", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:28.952930Z", "level": "INFO", "ip_origem": "192.168.1.15", "usuario_alvo": "usuario_comum", "status_autenticacao": "SUCESSO", "mensagem": "Autenticacao bem-sucedida"}
+{"@timestamp": "2026-11-21T13:01:29.963146Z", "level": "WARNING", "ip_origem": "192.168.1.15", "usuario_alvo": "usuario_comum", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:31.976841Z", "level": "INFO", "ip_origem": "192.168.1.15", "usuario_alvo": "usuario_comum", "status_autenticacao": "SUCESSO", "mensagem": "Autenticacao bem-sucedida"}
+{"@timestamp": "2026-11-21T13:01:34.993768Z", "level": "WARNING", "ip_origem": "192.168.1.51", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:36.510517Z", "level": "WARNING", "ip_origem": "192.168.1.50", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:38.023717Z", "level": "WARNING", "ip_origem": "192.168.1.50", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:39.531826Z", "level": "WARNING", "ip_origem": "192.168.1.51", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:41.037703Z", "level": "WARNING", "ip_origem": "192.168.1.50", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:42.547240Z", "level": "WARNING", "ip_origem": "192.168.1.51", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:44.054783Z", "level": "WARNING", "ip_origem": "192.168.1.50", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
+{"@timestamp": "2026-11-21T13:01:45.569264Z", "level": "WARNING", "ip_origem": "192.168.1.51", "usuario_alvo": "admin", "status_autenticacao": "FALHA", "mensagem": "Falha de autenticacao"}
